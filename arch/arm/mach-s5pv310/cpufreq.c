@@ -179,7 +179,7 @@ static struct cpufreq_frequency_table s5pv310_freq_table[] = {
 #undef SYSFS_DEBUG_BUSFREQ
 
 #define MAX_LOAD	100
-#define UP_THRESHOLD_DEFAULT	23
+#define UP_THRESHOLD_DEFAULT	20
 
 static unsigned int up_threshold;
 static struct s5pv310_dmc_ppmu_hw dmc[2];
@@ -1218,10 +1218,44 @@ static int s5pv310_target(struct cpufreq_policy *policy,
 
 	if (s5pv310_max_armclk == ARMCLOCK_1200MHZ) {
 #ifdef CONFIG_FREQ_STEP_UP_L2_L0
+
+	if (index == L0) {
+		if (old_index > L3)
+			index = L3;
+		else if (old_index > L2)
+			index = L2;
+		else if (old_index > L1)
+			index = L1;
+		else{
+			index = L0;
+		}
+	}
+	if (index == L1) {
+		if (old_index > L3)
+			index = L3;
+		else if (old_index > L2)
+			index = L2;
+		else{
+			index = L1;
+		}
+	}
+	if (index == L2) {
+		if (old_index > L3)
+			index = L3;
+		else{
+			index = L2;
+		}
+	}
+	if (index == L3) {
+		index = L3;
+	}
+
+#if 0
 		/* change L2 -> L0 */
 		if ((index == L0) && (old_index > L2)) {
 			printk(KERN_ERR "index= %d, old_index= %d\n", index, old_index);
 			index = L2;
+#endif
 		}
 #else
 		/* change L2 -> L1 and change L1 -> L0 */
@@ -1234,6 +1268,8 @@ static int s5pv310_target(struct cpufreq_policy *policy,
 				index = L2;
 		}
 #endif
+
+#if 0
 	} else {
 		/* Prevent from jumping to 1GHz directly */
 		if ((index == L0) && (old_index > L1))
@@ -1245,6 +1281,7 @@ static int s5pv310_target(struct cpufreq_policy *policy,
 		if (old_index > L3)
 			old_index = L3;
 	}
+#endif
 
 	freqs.new = s5pv310_freq_table[index].frequency;
 	freqs.cpu = policy->cpu;
