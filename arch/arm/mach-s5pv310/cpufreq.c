@@ -1273,6 +1273,12 @@ static int s5pv310_target(struct cpufreq_policy *policy,
 			old_index = L3;
 	}
 #endif
+/* prevent freqs going above max policy - netarchy */
+	if (s5pv310_freq_table[index].frequency > policy->max) {
+		while (s5pv310_freq_table[index].frequency > policy->max) {
+			index += 1;
+		}
+	}
 
 	freqs.new = s5pv310_freq_table[index].frequency;
 	freqs.cpu = policy->cpu;
@@ -1783,12 +1789,17 @@ static int s5pv310_cpufreq_resume(struct cpufreq_policy *policy)
 static int s5pv310_cpufreq_notifier_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
+	static int max, min;
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 	unsigned int cpu = 0;
 	int ret = 0;
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		ret = cpufreq_driver_target(cpufreq_cpu_get(cpu),
+		max = policy->max;
+		min = policy->min;
+		policy->max = policy->min = s5pv310_freq_table[L1].frequency;
+		ret = cpufreq_driver_target(policy,
 		s5pv310_freq_table[L1].frequency, DISABLE_FURTHER_CPUFREQ);
 		if (WARN_ON(ret < 0))
 			return NOTIFY_BAD;
@@ -1800,8 +1811,10 @@ static int s5pv310_cpufreq_notifier_event(struct notifier_block *this,
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
 		printk(KERN_DEBUG "PM_POST_SUSPEND for CPUFREQ: %d\n", ret);
-		ret = cpufreq_driver_target(cpufreq_cpu_get(cpu),
+		ret = cpufreq_driver_target(policy,
 		s5pv310_freq_table[L1].frequency, ENABLE_FURTHER_CPUFREQ);
+		policy->max = max;
+		policy->min = min;
 #ifdef CONFIG_S5PV310_BUSFREQ
 		s5pv310_busfreq_lock_free(DVFS_LOCK_ID_PM);
 #endif
@@ -1860,8 +1873,18 @@ static int s5pv310_cpufreq_cpu_init(struct cpufreq_policy *policy)
 		cpumask_setall(policy->cpus);
 	}
 
-	return cpufreq_frequency_table_cpuinfo(policy, s5pv310_freq_table);
+	cpufreq_frequency_table_cpuinfo(policy, s5pv310_freq_table);
+	/* set safe default min and max speeds - netarchy */
+	policy->max = 1200000;
+	policy->min = 200000;
+	return 0;
 }
+
+/* Make sure we have the scaling_available_freqs sysfs file */
+static struct freq_attr *sqs_cpufreq_attr[] = {
+        &cpufreq_freq_attr_scaling_available_freqs,
+        NULL,
+}; 
 
 static struct cpufreq_driver s5pv310_driver = {
 	.flags = CPUFREQ_STICKY,
@@ -1870,6 +1893,7 @@ static struct cpufreq_driver s5pv310_driver = {
 	.get = s5pv310_getspeed,
 	.init = s5pv310_cpufreq_cpu_init,
 	.name = "s5pv310_cpufreq",
+	.attr = sqs_cpufreq_attr,
 #ifdef CONFIG_PM
 	.suspend = s5pv310_cpufreq_suspend,
 	.resume = s5pv310_cpufreq_resume,
