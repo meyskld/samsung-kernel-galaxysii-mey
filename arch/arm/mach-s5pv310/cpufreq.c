@@ -1226,28 +1226,19 @@ static int s5pv310_target(struct cpufreq_policy *policy,
 			index = L2;
 		else if (old_index > L1)
 			index = L1;
-		else{
-			index = L0;
-		}
+		
 	}
-	if (index == L1) {
+	else if (index == L1) {
 		if (old_index > L3)
 			index = L3;
 		else if (old_index > L2)
 			index = L2;
-		else{
-			index = L1;
-		}
+		
 	}
-	if (index == L2) {
+	else if (index == L2) {
 		if (old_index > L3)
 			index = L3;
-		else{
-			index = L2;
-		}
-	}
-	if (index == L3) {
-		index = L3;
+		
 	}
 
 #if 0
