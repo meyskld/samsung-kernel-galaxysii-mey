@@ -354,10 +354,8 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
-		   -g -O3 -march=armv7-a -mtune=cortex-a9 \
-		   -mfpu=neon -mfloat-abi=hard -mvectorize-with-neon-quad \
-		   -fomit-frame-pointer -fstrength-reduce \
-		   -floop-interchange -floop-strip-mine -floop-block -ffast-math -funsafe-loop-optimizations
+		   -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=hard \
+		   -mno-unaligned-access
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
